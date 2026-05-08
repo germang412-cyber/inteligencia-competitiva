@@ -1,0 +1,36 @@
+name: Scan Semanal Competencia
+
+on:
+  schedule:
+    - cron: '0 10 * * 1'  # Cada lunes 7AM Paraguay
+  workflow_dispatch:        # También manual
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: |
+          pip install requests beautifulsoup4 lxml pandas schedule anthropic pillow openpyxl
+
+      - name: Correr scraper web
+        run: python scraper_competencia.py
+
+      - name: Leer precios de imágenes
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
+        run: python leer_precios_imagenes.py --input ig_solo_ofertas.csv
+
+      - name: Guardar resultados
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultados-${{ github.run_id }}
+          path: resultados/
+          retention-days: 30
